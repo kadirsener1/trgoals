@@ -1,35 +1,34 @@
-name: Trgoals Bot Guncelle
+name: M3U Scraper
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    - cron: "0 */1 * * *"   # her 1 saatte bir
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Depoyu cek
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Python Kur
-        uses: actions/setup-python@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: "3.11"
 
-      - name: Gerekli Kutuphaneler
-        run: pip install requests
-
-      - name: Botu Calistir
-        run: python main.py
-
-      - name: Kaydet ve Yukle
+      - name: Install dependencies
         run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Action"
-          git add Trgoals.m3u
-          git commit -m "Trgoals Liste Guncellendi: $(date)" || exit 0
+          pip install -r requirements.txt
+          playwright install
+
+      - name: Run scraper
+        run: python scraper.py
+
+      - name: Commit M3U file
+        run: |
+          git config --global user.name "bot"
+          git config --global user.email "bot@users.noreply.github.com"
+          git add playlist.m3u
+          git commit -m "update m3u" || echo "no changes"
           git push
