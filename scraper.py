@@ -4,14 +4,6 @@ from playwright.async_api import async_playwright
 BASE_URL = "https://patronizle35.cfd"
 
 CHANNELS = {
-    "patron":"BEIN SPORTS 1-P",
-    "yayinzirve":"BEIN SPORTS 1",
-    "yayinb2":"BEIN SPORTS 2",
-    "yayinb3":"BEIN SPORTS 3",
-    "yayinb4":"BEIN SPORTS 4",
-    "yayinb5":"BEIN SPORTS 5",
-    "yayinbm1":"BEIN SPORTS MAX 1",
-    "yayinbm2":"BEIN SPORTS MAX 2",
     "yayinss": "S SPORT 1",
     "yayinss2": "S SPORT 2",
     "yayint1": "TIVIBU SPOR 1",
@@ -27,14 +19,6 @@ CHANNELS = {
     "yayintv8": "TV8 HD",
     "yayintv85": "TV8,5 HD",
     "yayinnbatv": "NBA TV",
-    "yayinex1": "TABII 1",
-    "yayinex2": "TABII 2",
-    "yayinex3": "TABII 3",
-    "yayinex4": "TABII 4",
-    "yayinex5": "TABII 5",
-    "yayinex6": "TABII 6",
-    "yayinex7": "TABII 7",
-    "yayinex8": "TABII 8",
 }
 
 output = []
@@ -45,34 +29,52 @@ async def run():
         page = await browser.new_page()
 
         for slug, name in CHANNELS.items():
-            m3u8_links = set()
-
-            def handle_response(response):
-                if ".m3u8" in response.url:
-                    m3u8_links.add(response.url)
-
-            page.on("response", handle_response)
+            found = set()
 
             url = f"{BASE_URL}/ch.html?id={slug}"
-            await page.goto(url, wait_until="networkidle")
-            await asyncio.sleep(3)
 
-            page.remove_listener("response", handle_response)
+            print("Açılıyor:", name)
 
-            if m3u8_links:
-                for link in m3u8_links:
-                    output.append((name, link))
-                    print(name, link)
+            async def intercept(response):
+                try:
+                    if ".m3u8" in response.url:
+                        found.add(response.url)
+                except:
+                    pass
+
+            page.on("response", intercept)
+
+            await page.goto(url, wait_until="domcontentloaded")
+            await page.wait_for_timeout(5000)
+
+            # 1) iframe kontrol
+            frames = page.frames
+            for f in frames:
+                try:
+                    content = await f.content()
+                    if ".m3u8" in content:
+                        import re
+                        urls = re.findall(r"https?://[^\s'\"]+\.m3u8[^\s'\"]*", content)
+                        for u in urls:
+                            found.add(u)
+                except:
+                    pass
+
+            page.remove_listener("response", intercept)
+
+            if found:
+                for u in found:
+                    print("[OK]", name, u)
+                    output.append((name, u))
             else:
-                print(f"[!] Bulunamadı: {name}")
+                print("[!] Bulunamadı:", name)
 
         await browser.close()
 
-    # M3U dosyası yaz
     with open("playlist.m3u", "w", encoding="utf-8") as f:
         f.write("#EXTM3U\n")
         for name, url in output:
-            f.write(f'#EXTINF:-1,{name}\n{url}\n')
+            f.write(f"#EXTINF:-1,{name}\n{url}\n")
 
 if __name__ == "__main__":
     asyncio.run(run())
