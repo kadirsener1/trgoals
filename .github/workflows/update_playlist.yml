@@ -2,11 +2,11 @@ name: M3U Playlist Güncelleyici
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # Her 6 saatte bir otomatik çalış
-  workflow_dispatch:          # Manuel tetikleme butonu
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
 
 permissions:
-  contents: write             # playlist.m3u dosyasını commit edebilmek için
+  contents: write
 
 jobs:
   update:
@@ -24,13 +24,19 @@ jobs:
       - name: 📦 Bağımlılıkları Yükle
         run: pip install -r requirements.txt
 
+      # ── Playwright sistem bağımlılıkları (GitHub runner için zorunlu) ──
+      - name: 🎭 Playwright Chromium Kur
+        run: |
+          playwright install chromium
+          playwright install-deps chromium
+
       - name: ▶️ Scripti Çalıştır
         run: python fetch_m3u.py
 
-      - name: 💾 Değişiklikleri Commit & Push Et
+      - name: 💾 Commit & Push
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add playlist.m3u last_known_domain.json
-          git diff --cached --quiet || git commit -m "🔄 Playlist otomatik güncellendi [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git diff --cached --quiet || git commit -m "🔄 Playlist güncellendi [$(date -u '+%Y-%m-%d %H:%M UTC')]"
           git push
