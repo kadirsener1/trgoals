@@ -1,80 +1,80 @@
 import asyncio
+import re
+import json
+import requests
 from playwright.async_api import async_playwright
 
-BASE_URL = "https://patronizle35.cfd"
+BASE_CHANNELS = "https://patronsports2.cfd/channels.php"
+BASE_PLAYER = "https://patronizle35.cfd/ch.html?id="
 
-CHANNELS = {
-    "yayinss": "S SPORT 1",
-    "yayinss2": "S SPORT 2",
-    "yayint1": "TIVIBU SPOR 1",
-    "yayint2": "TIVIBU SPOR 2",
-    "yayint3": "TIVIBU SPOR 3",
-    "yayint4": "TIVIBU SPOR 4",
-    "yayinsmarts": "SPOR SMART 1",
-    "yayinsms2": "SPOR SMART 2",
-    "yayintrtspor": "TRT SPOR",
-    "yayintrtspor2": "TRT SPOR 2",
-    "yayinas": "A SPOR",
-    "yayinatv": "ATV HD",
-    "yayintv8": "TV8 HD",
-    "yayintv85": "TV8,5 HD",
-    "yayinnbatv": "NBA TV",
-}
+# 1) kanal listesini çek
+def get_channels():
+    html = requests.get(BASE_CHANNELS).text
 
-output = []
+    # JSON varsa direkt yakala
+    try:
+        data = json.loads(html)
+        return data
+    except:
+        pass
+
+    # JS object yakala
+    matches = re.findall(r'"(yayin[^"]+)"\s*:\s*"([^"]+)"', html)
+    return {k: v for k, v in matches}
+
 
 async def run():
+    channels = get_channels()
+    print("Kanal sayısı:", len(channels))
+
+    results = []
+
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
 
-        for slug, name in CHANNELS.items():
+        for slug, name in channels.items():
+            print("Deneme:", name)
+
             found = set()
 
-            url = f"{BASE_URL}/ch.html?id={slug}"
+            def handle_response(resp):
+                if ".m3u8" in resp.url:
+                    found.add(resp.url)
 
-            print("Açılıyor:", name)
+            page.on("response", handle_response)
 
-            async def intercept(response):
-                try:
-                    if ".m3u8" in response.url:
-                        found.add(response.url)
-                except:
-                    pass
+            await page.goto(BASE_PLAYER + slug, wait_until="domcontentloaded")
+            await page.wait_for_timeout(6000)
 
-            page.on("response", intercept)
-
-            await page.goto(url, wait_until="domcontentloaded")
-            await page.wait_for_timeout(5000)
-
-            # 1) iframe kontrol
+            # iframe içi kontrol
             frames = page.frames
             for f in frames:
                 try:
                     content = await f.content()
-                    if ".m3u8" in content:
-                        import re
-                        urls = re.findall(r"https?://[^\s'\"]+\.m3u8[^\s'\"]*", content)
-                        for u in urls:
-                            found.add(u)
+                    urls = re.findall(r"https?://[^\s'\"]+\.m3u8[^\s'\"]*", content)
+                    for u in urls:
+                        found.add(u)
                 except:
                     pass
 
-            page.remove_listener("response", intercept)
+            page.remove_listener("response", handle_response)
 
             if found:
                 for u in found:
                     print("[OK]", name, u)
-                    output.append((name, u))
+                    results.append((name, u))
             else:
-                print("[!] Bulunamadı:", name)
+                print("[X] Yok:", name)
 
         await browser.close()
 
+    # M3U yaz
     with open("playlist.m3u", "w", encoding="utf-8") as f:
         f.write("#EXTM3U\n")
-        for name, url in output:
+        for name, url in results:
             f.write(f"#EXTINF:-1,{name}\n{url}\n")
+
 
 if __name__ == "__main__":
     asyncio.run(run())
