@@ -10,7 +10,7 @@ BASE_DOMAIN_PREFIX = "https://patronizle"
 def find_active_domain():
     print("[1/3] Aktif domain araniyor...")
     # Tarama araligini biraz genislettim
-    for i in range(30, 100):
+    for i in range(35, 100):
         test_domain = f"{BASE_DOMAIN_PREFIX}{i}.cfd"
         try:
             # Sadece header kontrolü yaparak hizlandiriyoruz
