@@ -29,7 +29,8 @@ def create_m3u():
         return
 
     channel_ids = {
-        "yayinzirve":"BEIN SPORTS 1","patron":"BEIN SPORTS 1","yayininat":"BEIN SPORTS 1","yayin1":"BEIN SPORTS 1",
+        "patron":"BEIN SPORTS 1",
+        "yayinzirve":"BEIN SPORTS 1",
         "yayinb2":"BEIN SPORTS 2",
         "yayinb3":"BEIN SPORTS 3",
         "yayinb4":"BEIN SPORTS 4",
@@ -66,7 +67,7 @@ def create_m3u():
     m3u_content += f"# Son Guncelleme: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
 
     for cid, cname in channel_ids.items():
-        url = f"{domain}/channel.html?id={cid}"
+        url = f"{domain}/ch.html?id={cid}"
         try:
             r = requests.get(url, headers={"User-Agent":"Mozilla/5.0"}, timeout=5)
             r.encoding = 'utf-8'
