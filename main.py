@@ -5,13 +5,13 @@ import datetime
 # Ayarlar
 OUTPUT_FILE = "Trgoals.m3u"
 LOGO_URL = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQGFDG5osdfPh7QmAhMmkGUW1P7HED2vWGq1cOzdj1_3Q&s=10"
-BASE_DOMAIN_PREFIX = "https://trgoals"
+BASE_DOMAIN_PREFIX = "https://patronizle"
 
 def find_active_domain():
     print("[1/3] Aktif domain araniyor...")
     # Tarama araligini biraz genislettim
-    for i in range(1480, 2200):
-        test_domain = f"{BASE_DOMAIN_PREFIX}{i}.xyz"
+    for i in range(30, 100):
+        test_domain = f"{BASE_DOMAIN_PREFIX}{i}.cfd"
         try:
             # Sadece header kontrolü yaparak hizlandiriyoruz
             response = requests.head(test_domain, timeout=2)
@@ -29,17 +29,36 @@ def create_m3u():
         return
 
     channel_ids = {
-        "yayinzirve":"BEIN SPORTS 1","yayininat":"BEIN SPORTS 1","yayin1":"BEIN SPORTS 1",
-        "yayinb2":"BEIN SPORTS 2","yayinb3":"BEIN SPORTS 3","yayinb4":"BEIN SPORTS 4",
-        "yayinb5":"BEIN SPORTS 5","yayinbm1":"BEIN SPORTS MAX 1","yayinbm2":"BEIN SPORTS MAX 2",
-        "yayinss":"S SPORT 1","yayinss2":"S SPORT 2","yayint1":"TIVIBU SPOR 1",
-        "yayint2":"TIVIBU SPOR 2","yayint3":"TIVIBU SPOR 3","yayint4":"TIVIBU SPOR 4",
-        "yayinsmarts":"SPOR SMART 1","yayinsms2":"SPOR SMART 2","yayintrtspor":"TRT SPOR",
-        "yayintrtspor2":"TRT SPOR 2","yayinas":"A SPOR","yayinatv":"ATV HD",
-        "yayintv8":"TV8 HD","yayintv85":"TV8,5 HD","yayinnbatv":"NBA TV",
-        "yayinex1":"TABII 1","yayinex2":"TABII 2","yayinex3":"TABII 3",
-        "yayinex4":"TABII 4","yayinex5":"TABII 5","yayinex6":"TABII 6",
-        "yayinex7":"TABII 7","yayinex8":"TABII 8"
+        "yayinzirve":"BEIN SPORTS 1","patron":"BEIN SPORTS 1","yayininat":"BEIN SPORTS 1","yayin1":"BEIN SPORTS 1",
+        "yayinb2":"BEIN SPORTS 2",
+        "yayinb3":"BEIN SPORTS 3",
+        "yayinb4":"BEIN SPORTS 4",
+        "yayinb5":"BEIN SPORTS 5",
+        "yayinbm1":"BEIN SPORTS MAX 1",
+        "yayinbm2":"BEIN SPORTS MAX 2",
+        "yayinss":"S SPORT 1",
+        "yayinss2":"S SPORT 2",
+        "yayint1":"TIVIBU SPOR 1",
+        "yayint2":"TIVIBU SPOR 2",
+        "yayint3":"TIVIBU SPOR 3",
+        "yayint4":"TIVIBU SPOR 4",
+        "yayinsmarts":"SPOR SMART 1",
+        "yayinsms2":"SPOR SMART 2",
+        "yayintrtspor":"TRT SPOR",
+        "yayintrtspor2":"TRT SPOR 2",
+        "yayinas":"A SPOR",
+        "yayinatv":"ATV HD",
+        "yayintv8":"TV8 HD",
+        "yayintv85":"TV8,5 HD",
+        "yayinnbatv":"NBA TV",
+        "yayinex1":"TABII 1",
+        "yayinex2":"TABII 2",
+        "yayinex3":"TABII 3",
+        "yayinex4":"TABII 4",
+        "yayinex5":"TABII 5",
+        "yayinex6":"TABII 6",
+        "yayinex7":"TABII 7",
+        "yayinex8":"TABII 8"
     }
 
     print("\n[2/3] Kanallar cekiliyor...")
