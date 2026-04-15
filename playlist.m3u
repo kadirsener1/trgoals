@@ -1,6 +1,6 @@
 #EXTM3U
 
-#EXTINF:-1 tvg-name="Patron TV" tvg-logo="" group-title="Canlı TV",Patron TV
+#EXTINF:-1 tvg-name="Patron TV" tvg-logo="" group-title="Canlı TV",Patron TV1
 #EXTVLCOPT:http-referrer=https://patronizle35.cfd
 #EXTVLCOPT:http-user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36
 #KODIPROP:inputstream.adaptive.manifest_type=hls
