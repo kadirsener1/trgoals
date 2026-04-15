@@ -4,6 +4,14 @@ from playwright.async_api import async_playwright
 BASE_URL = "https://patronizle35.cfd"
 
 CHANNELS = {
+    "patron":"BEIN SPORTS 1-P",
+    "yayinzirve":"BEIN SPORTS 1",
+    "yayinb2":"BEIN SPORTS 2",
+    "yayinb3":"BEIN SPORTS 3",
+    "yayinb4":"BEIN SPORTS 4",
+    "yayinb5":"BEIN SPORTS 5",
+    "yayinbm1":"BEIN SPORTS MAX 1",
+    "yayinbm2":"BEIN SPORTS MAX 2",
     "yayinss": "S SPORT 1",
     "yayinss2": "S SPORT 2",
     "yayint1": "TIVIBU SPOR 1",
