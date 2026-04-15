@@ -24,11 +24,11 @@ jobs:
       - name: 📦 Bağımlılıkları Yükle
         run: pip install -r requirements.txt
 
-      # ── Playwright sistem bağımlılıkları (GitHub runner için zorunlu) ──
+      # ── DÜZELTME: playwright yerine python -m playwright ──
       - name: 🎭 Playwright Chromium Kur
         run: |
-          playwright install chromium
-          playwright install-deps chromium
+          python -m playwright install chromium
+          python -m playwright install-deps chromium
 
       - name: ▶️ Scripti Çalıştır
         run: python fetch_m3u.py
