@@ -21,15 +21,16 @@ DOMAIN_NUMBER_RANGE = range(30, 55)
 OUTPUT_FILE = "playlist.m3u"
 STATE_FILE  = "last_known_domain.json"
 
-# Network isteği beklenecek maksimum süre (saniye)
 WAIT_TIMEOUT = 30
 
+USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+
 HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/124.0.0.0 Safari/537.36"
-    ),
+    "User-Agent": USER_AGENT,
 }
 
 
@@ -50,7 +51,7 @@ def save_state(state: dict):
 
 
 # ─────────────────────────────────────────────
-#  DOMAIN KEŞİF SİSTEMİ (requests tabanlı - hafif)
+#  DOMAIN KEŞİF SİSTEMİ
 # ─────────────────────────────────────────────
 
 def probe_domain(number: int, ext: str) -> bool:
@@ -95,14 +96,9 @@ def discover_active_domain(current_number: int = 35, current_ext: str = ".cfd") 
 # ─────────────────────────────────────────────
 
 async def intercept_m3u8(context: BrowserContext, url: str, channel_name: str) -> str | None:
-    """
-    Sayfayı Playwright ile aç, tüm network isteklerini dinle,
-    .m3u8 içeren ilk isteği yakala ve döndür.
-    """
     page: Page = await context.new_page()
     found_url: list[str] = []
 
-    # ── 1. Network request dinleyicisi ──────────────────────────────
     def on_request(request):
         req_url = request.url
         if ".m3u8" in req_url and not found_url:
@@ -118,7 +114,6 @@ async def intercept_m3u8(context: BrowserContext, url: str, channel_name: str) -
     page.on("request",  on_request)
     page.on("response", on_response)
 
-    # ── 2. Sayfayı yükle ────────────────────────────────────────────
     print(f"  🌐 Sayfa açılıyor: {url}")
     try:
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
@@ -127,12 +122,10 @@ async def intercept_m3u8(context: BrowserContext, url: str, channel_name: str) -
         await page.close()
         return None
 
-    # ── 3. iframe'leri bul ve onlara da listener ekle ───────────────
     try:
-        # iframe'lerin yüklenmesini bekle
         await page.wait_for_load_state("networkidle", timeout=15000)
     except Exception:
-        pass  # timeout olsa bile devam et
+        pass
 
     frames = page.frames
     print(f"  🖼  Toplam frame sayısı: {len(frames)}")
@@ -140,8 +133,6 @@ async def intercept_m3u8(context: BrowserContext, url: str, channel_name: str) -
         if frame.url and frame.url != "about:blank":
             print(f"  🖼  Frame URL: {frame.url[:80]}")
 
-    # ── 4. Oynatıcıyı başlatmaya çalış ──────────────────────────────
-    # Play butonuna tıkla (farklı player'lar için ortak seçiciler)
     play_selectors = [
         "button.play",
         ".vjs-big-play-button",
@@ -163,7 +154,6 @@ async def intercept_m3u8(context: BrowserContext, url: str, channel_name: str) -
         except Exception:
             continue
 
-    # iframe içindeki play butonlarını da dene
     for frame in page.frames:
         if frame == page.main_frame:
             continue
@@ -177,9 +167,8 @@ async def intercept_m3u8(context: BrowserContext, url: str, channel_name: str) -
             except Exception:
                 continue
 
-    # ── 5. M3U8 linki için bekle ────────────────────────────────────
     print(f"  ⏳ M3U8 bekleniyor (max {WAIT_TIMEOUT}s)...")
-    for _ in range(WAIT_TIMEOUT * 2):   # 0.5s aralıklarla kontrol
+    for _ in range(WAIT_TIMEOUT * 2):
         if found_url:
             break
         await asyncio.sleep(0.5)
@@ -198,18 +187,53 @@ async def intercept_m3u8(context: BrowserContext, url: str, channel_name: str) -
 #  M3U DOSYASI OLUŞTURUCU
 # ─────────────────────────────────────────────
 
-def build_m3u(entries: list[dict]) -> str:
+def build_m3u(entries: list[dict], referer: str = "") -> str:
     lines = ["#EXTM3U", ""]
     for e in entries:
-        name  = e.get("name",  "Kanal")
-        logo  = e.get("logo",  "")
-        group = e.get("group", "Canlı TV")
-        url   = e.get("url",   "")
+        name     = e.get("name",    "Kanal")
+        logo     = e.get("logo",    "")
+        group    = e.get("group",   "Canlı TV")
+        url      = e.get("url",     "")
+        ch_refer = e.get("referer", referer)
+
         if not url:
             continue
-        lines.append(f'#EXTINF:-1 tvg-name="{name}" tvg-logo="{logo}" group-title="{group}",{name}')
-        lines.append(url)
+
+        # ── #EXTINF ──────────────────────────────────────────────────
+        lines.append(
+            f'#EXTINF:-1 tvg-name="{name}" tvg-logo="{logo}" '
+            f'group-title="{group}",{name}'
+        )
+
+        # ── VLC ──────────────────────────────────────────────────────
+        lines.append(f'#EXTVLCOPT:http-referrer={ch_refer}')
+        lines.append(f'#EXTVLCOPT:http-user-agent={USER_AGENT}')
+
+        # ── Kodi ─────────────────────────────────────────────────────
+        lines.append(f'#KODIPROP:inputstream.adaptive.manifest_type=hls')
+        lines.append(f'#KODIPROP:http-referrer={ch_refer}')
+        lines.append(f'#KODIPROP:inputstreamaddon=inputstream.adaptive')
+        lines.append(
+            f'#KODIPROP:inputstream.adaptive.stream_headers='
+            f'Referer={ch_refer}&User-Agent={USER_AGENT}'
+        )
+
+        # ── TiviMate / IPTV Smarters / GSE ───────────────────────────
+        lines.append(f'#EXTHTTP:{{"referrer":"{ch_refer}","user-agent":"{USER_AGENT}"}}')
+
+        # ── URL'e header parametresi ekle ────────────────────────────
+        if "|" not in url:
+            url_with_headers = (
+                f"{url}|"
+                f"Referer={ch_refer}&"
+                f"User-Agent={USER_AGENT}"
+            )
+        else:
+            url_with_headers = url
+
+        lines.append(url_with_headers)
         lines.append("")
+
     return "\n".join(lines)
 
 
@@ -258,23 +282,20 @@ async def main():
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
-                "--autoplay-policy=no-user-gesture-required",  # otomatik oynatma izni
+                "--autoplay-policy=no-user-gesture-required",
             ],
         )
 
-        # Her kanal için ayrı context (cookie izolasyonu)
         for ch in updated_channels:
             print(f"\n[{ch['name']}] → {ch['url']}")
 
             context = await browser.new_context(
-                user_agent=HEADERS["User-Agent"],
+                user_agent=USER_AGENT,
                 viewport={"width": 1280, "height": 720},
-                # Medya izinleri
                 permissions=["camera", "microphone"],
                 ignore_https_errors=True,
             )
 
-            # Gereksiz kaynakları engelle (hızlandırır, m3u8'i engellemez)
             await context.route(
                 re.compile(r"\.(png|jpg|jpeg|gif|svg|woff2?|css)(\?.*)?$"),
                 lambda route: route.abort()
@@ -285,10 +306,11 @@ async def main():
 
             if m3u8_url:
                 entries.append({
-                    "name":  ch["name"],
-                    "group": ch.get("group", "Canlı TV"),
-                    "logo":  ch.get("logo",  ""),
-                    "url":   m3u8_url,
+                    "name":    ch["name"],
+                    "group":   ch.get("group", "Canlı TV"),
+                    "logo":    ch.get("logo",  ""),
+                    "url":     m3u8_url,
+                    "referer": ch["url"],   # kanalın sayfa URL'si referer olarak
                 })
             else:
                 print(f"  ⚠ '{ch['name']}' atlandı.")
@@ -298,7 +320,8 @@ async def main():
     # 4. M3U dosyasını yaz
     print("\n" + "=" * 60)
     if entries:
-        content = build_m3u(entries)
+        referer_base = f"https://{active_domain}/"
+        content = build_m3u(entries, referer=referer_base)
         with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
             f.write(content)
         print(f"✅ playlist.m3u oluşturuldu → {len(entries)} kanal")
