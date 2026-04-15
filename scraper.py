@@ -1,41 +1,48 @@
 import asyncio
 import re
 import json
-import requests
 from playwright.async_api import async_playwright
 
 BASE_CHANNELS = "https://patronsports2.cfd/channels.php"
 BASE_PLAYER = "https://patronizle35.cfd/ch.html?id="
 
-# 1) kanal listesini çek
-def get_channels():
-    html = requests.get(BASE_CHANNELS).text
 
-    # JSON varsa direkt yakala
+def parse_channels(html):
+    # 1) JSON object
     try:
         data = json.loads(html)
-        return data
+        if isinstance(data, dict):
+            return data
+
+        if isinstance(data, list):
+            merged = {}
+            for item in data:
+                if isinstance(item, dict):
+                    merged.update(item)
+            return merged
     except:
         pass
 
-    # JS object yakala
+    # 2) regex fallback
     matches = re.findall(r'"(yayin[^"]+)"\s*:\s*"([^"]+)"', html)
-    return {k: v for k, v in matches}
+    return dict(matches)
 
 
 async def run():
-    channels = get_channels()
-    print("Kanal sayısı:", len(channels))
-
-    results = []
-
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
 
-        for slug, name in channels.items():
-            print("Deneme:", name)
+        await page.goto(BASE_CHANNELS)
+        html = await page.content()
 
+        channels = parse_channels(html)
+
+        print("Kanal sayısı:", len(channels))
+
+        results = []
+
+        for slug, name in channels.items():
             found = set()
 
             def handle_response(resp):
@@ -44,19 +51,8 @@ async def run():
 
             page.on("response", handle_response)
 
-            await page.goto(BASE_PLAYER + slug, wait_until="domcontentloaded")
+            await page.goto(BASE_PLAYER + slug)
             await page.wait_for_timeout(6000)
-
-            # iframe içi kontrol
-            frames = page.frames
-            for f in frames:
-                try:
-                    content = await f.content()
-                    urls = re.findall(r"https?://[^\s'\"]+\.m3u8[^\s'\"]*", content)
-                    for u in urls:
-                        found.add(u)
-                except:
-                    pass
 
             page.remove_listener("response", handle_response)
 
@@ -65,15 +61,14 @@ async def run():
                     print("[OK]", name, u)
                     results.append((name, u))
             else:
-                print("[X] Yok:", name)
+                print("[X]", name)
 
         await browser.close()
 
-    # M3U yaz
-    with open("playlist.m3u", "w", encoding="utf-8") as f:
-        f.write("#EXTM3U\n")
-        for name, url in results:
-            f.write(f"#EXTINF:-1,{name}\n{url}\n")
+        with open("playlist.m3u", "w", encoding="utf-8") as f:
+            f.write("#EXTM3U\n")
+            for name, url in results:
+                f.write(f"#EXTINF:-1,{name}\n{url}\n")
 
 
 if __name__ == "__main__":
