@@ -21,14 +21,23 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 📦 Bağımlılıkları Yükle
-        run: pip install -r requirements.txt
+      - name: 📦 pip'i Güncelle
+        run: python -m pip install --upgrade pip
 
-      # ── DÜZELTME: playwright yerine python -m playwright ──
-      - name: 🎭 Playwright Chromium Kur
-        run: |
-          python -m playwright install chromium
-          python -m playwright install-deps chromium
+      - name: 📦 requests Yükle
+        run: python -m pip install requests
+
+      - name: 📦 Playwright Yükle
+        run: python -m pip install playwright
+
+      - name: 🔍 Playwright Kontrol
+        run: python -c "import playwright; print('Playwright OK')"
+
+      - name: 🎭 Chromium İndir
+        run: python -m playwright install chromium
+
+      - name: 🎭 Chromium Sistem Bağımlılıkları
+        run: python -m playwright install-deps chromium
 
       - name: ▶️ Scripti Çalıştır
         run: python fetch_m3u.py
